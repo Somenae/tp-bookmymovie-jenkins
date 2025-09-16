@@ -1,0 +1,57 @@
+services:
+  jenkins:
+    build: .
+    container_name: jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    privileged: true
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - cicd
+
+  sonarqube:
+    image: sonarqube:latest
+    container_name: sonarqube
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - cicd
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok
+    depends_on:
+      - jenkins
+    command:
+      - "http"
+      - "jenkins:8080"
+    ports:
+      - 4040:4040
+    environment:
+      - NGROK_AUTHTOKEN=32UzQQOO3AnuRoOIDm6rN89rBRG_7vgA4T8y8akuwXBkhTn5M   
+    networks:
+      - cicd
+
+  bookmymovie-api:
+    build: ./bookmymovie-api
+    env_file: ./bookmymovie-api/.env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+
+
+volumes:
+  jenkins_home:
+  sonarqube_data:
+  sonarqube_extensions:
+
+networks:
+  cicd:
+    driver: bridge
